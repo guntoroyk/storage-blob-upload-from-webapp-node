@@ -11,7 +11,12 @@
 
 <h2>Generated Thumbnails</h2>
 {{#each this.thumbnails}}
-  <img src="https://{{../accountName}}.blob.core.windows.net/{{../containerName}}/{{name}}">
+  <a href="/analyze">
+      <img src="https://{{../accountName}}.blob.core.windows.net/{{../containerName}}/{{name}}" style="border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 5px;
+      width: 150px;" id="myImg">
+  </a>
 {{/each}}
 
 <hr>
@@ -36,3 +41,5 @@
 
   });
 </script>
+
+<script src="./"></script>
