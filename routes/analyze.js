@@ -1,58 +1,50 @@
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').load();
-}
-
-const
-      express = require('express')
-    , router = express.Router()
-    , request = require('request')
-;
+const request = require('request')
 
 // Replace <Subscription Key> with your valid subscription key.
-const subscriptionKey = '061d02d11989427db753a9fc97c3c0f2';
-
 // You must use the same location in your REST call as you used to get your
 // subscription keys. For example, if you got your subscription keys from
 // westus, replace "westcentralus" in the URL below with "westus".
-const uriBase =
-    'https://southeastasia.api.cognitive.microsoft.com/vision/v2.0/analyze';
 
-const imageUrl = ????????????;
+const {
+  COGNITIVE_API_ENDPOINT,
+  COGNITIVE_API_SUBSCRIPTION_KEY
+} = require('../config/env')
 
-// Request parameters.
-const params = {
-    'visualFeatures': 'Categories,Description,Color',
-    'details': '',
-    'language': 'en'
-};
+module.exports = router =>
+  router.get('/analyze', (req, res) => {
+    const imageUrl = JSON.stringify({
+      url: req.query.src
+    })
 
-const options = {
-    uri: uriBase,
-    qs: params,
-    body: '{"url": ' + '"' + imageUrl + '"}',
-    headers: {
-        'Content-Type': 'application/json',
-        'Ocp-Apim-Subscription-Key' : subscriptionKey
+    // Request parameters.
+    const params = {
+      'visualFeatures': 'Categories,Description,Color',
+      'details': '',
+      'language': 'en'
     }
-};
 
-let jsonResponse;
+    // Request options.
+    const options = {
+      uri: COGNITIVE_API_ENDPOINT,
+      qs: params,
+      body: imageUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        'Ocp-Apim-Subscription-Key': COGNITIVE_API_SUBSCRIPTION_KEY
+      }
+    }
 
-request.post(options, (error, response, body) => {
-  if (error) {
-    console.log('Error: ', error);
-    return;
-  }
-  jsonResponse = JSON.parse(body);
-  console.log('JSON Response\n');
-  console.log(jsonResponse);
-});
+    // Request action
+    request.post(options, (error, response, body) => {
+      if (error) {
+        console.log(error)
+        res.status(500)
+        return
+      }
 
-router.get('/', function(req, res){
-    res.render('analyzed', { 
-        description: jsonResponse.description.captions[0].text
-    });
-});
-
-
-module.exports = router;
+      const data = JSON.parse(body)
+      res.render('analyzed', {
+        data
+      })
+    })
+  })
