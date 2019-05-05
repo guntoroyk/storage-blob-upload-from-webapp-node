@@ -1,51 +1,30 @@
 if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').load();
+  require('dotenv').load()
 }
 
-const
-      express = require('express')
-    , router = express.Router()
-    , azureStorage = require('azure-storage')
-    , blobService = azureStorage.createBlobService()
-    , containerName = 'images'
-    , config = require('../config')
-;
+const azureStorage = require('azure-storage')
+const blobService = azureStorage.createBlobService()
+const {
+  getStorageAccountName,
+  getStorageEndpoint
+} = require('../config/getters')
 
-router.get('/', (req, res, next) => {
+const CONTAINER_NAME = 'images'
+const storageAccountName = getStorageAccountName()
+const storageEndpoint = getStorageEndpoint(storageAccountName, CONTAINER_NAME)
 
-  blobService.listBlobsSegmented(containerName, null, (err, data) => {
-
-    let viewData;
-
-    if (err) {
-
-      viewData = {
-        title: 'Error',
-        viewName: 'error',
-        message: 'There was an error contacting the blob storage container.',
-        error: err
-      };
-      
-      res.status(500);
-
-    } else {
-
-      viewData = {
-        title: 'Home',
-        viewName: 'index',
-        accountName: config.getStorageAccountName(),
-        containerName: containerName
-      };
-
-      if (data.entries.length) {
-        viewData.thumbnails = data.entries;
+module.exports = router =>
+  router.get('/', (req, res, next) => {
+    blobService.listBlobsSegmented(CONTAINER_NAME, null, (err, data) => {
+      if (err) {
+        console.log(err)
+        res.status(500)
+        return
       }
-      
-    }
 
-    res.render(viewData.viewName, viewData);
-  });
-
-});
-
-module.exports = router;
+      res.render('index', {
+        storageEndpoint,
+        data
+      })
+    })
+  })

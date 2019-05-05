@@ -1,51 +1,33 @@
 if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').load();
+  require('dotenv').load()
 }
 
-const
-      express = require('express')
-    , router = express.Router()
+const multer = require('multer')
+const azureStorage = require('azure-storage')
+const getStream = require('into-stream')
+const { getBlobName } = require('../utils/blob')
 
-    , multer = require('multer')
-    , inMemoryStorage = multer.memoryStorage()
-    , uploadStrategy = multer({ storage: inMemoryStorage }).single('image')
+const inMemoryStorage = multer.memoryStorage()
+const uploadStrategy = multer({ storage: inMemoryStorage }).single('image')
+const blobService = azureStorage.createBlobService()
 
-    , azureStorage = require('azure-storage')
-    , blobService = azureStorage.createBlobService()
+const CONTAINER_NAME = 'images'
 
-    , getStream = require('into-stream')
-    , containerName = 'images'
-;
+module.exports = router =>
+  router.post('/upload', uploadStrategy, (req, res) => {
+    const blobName = getBlobName(req.file.originalname)
+    const stream = getStream(req.file.buffer)
+    const streamLength = req.file.buffer.length
 
-const handleError = (err, res) => {
-    res.status(500);
-    res.render('error', { error: err });
-};
+    blobService.createBlockBlobFromStream(CONTAINER_NAME, blobName, stream, streamLength, err => {
+      if (err) {
+        console.log(err)
+        res.status(500)
+        return
+      }
 
-const getBlobName = originalName => {
-    const identifier = Math.random().toString().replace(/0\./, ''); // remove "0." from start of string
-    return `${identifier}-${originalName}`;
-};
-
-router.post('/', uploadStrategy, (req, res) => {
-
-    const
-          blobName = getBlobName(req.file.originalname)
-        , stream = getStream(req.file.buffer)
-        , streamLength = req.file.buffer.length
-    ;
-
-    blobService.createBlockBlobFromStream(containerName, blobName, stream, streamLength, err => {
-
-        if(err) {
-            handleError(err);
-            return;
-        }
-
-        res.render('success', { 
-            message: 'File uploaded to Azure Blob storage.' 
-        });
-    });
-});
-
-module.exports = router;
+      res.render('success', {
+        message: 'File uploaded to Azure Blob storage.'
+      })
+    })
+  })
